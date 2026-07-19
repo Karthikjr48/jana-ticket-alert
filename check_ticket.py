@@ -14,12 +14,12 @@ BOT_TOKEN = os.getenv("BOT_TOKEN")
 CHAT_ID = os.getenv("CHAT_ID")
 
 MOVIE_NAME = "Jana Nayagan"
-THEATRE_NAME = "Seven Screen's Cinemas"
 
 URLS = {
     "district": "https://www.district.in/movies/seven-screen-s-cinemas-kilambakkam-chennai-in-chennai-CD1102122",
     "ticketnew": "https://ticketnew.com/movies/chennai/seven-screen-s-cinemas-kilambakkam-chennai-c/1102122",
-    "bookmyshow_search": "https://in.bookmyshow.com/explore/movies-chennai"
+    "bookmyshow_search": "https://in.bookmyshow.com/explore/movies-chennai",
+    "pvr": "https://www.pvrcinemas.com/nowshowing/Chennai"
 }
 
 STATE_FILE = "state.json"
@@ -67,13 +67,11 @@ def check_district(page):
     try:
         page.goto(URLS["district"], wait_until="networkidle", timeout=60000)
         page.wait_for_timeout(3000)
-        # INIME VISIBLE TEXT MATTUM THAAN CHECK PANNUM
         content = page.inner_text("body").lower().replace("'", "")
         movie = MOVIE_NAME.lower()
         
         if movie in content:
             if "no shows" not in content and "no movies" not in content:
-                # Strict check for timings or booking buttons
                 if "am" in content or "pm" in content or "book" in content or "tickets" in content:
                     return True
     except Exception as e:
@@ -103,7 +101,7 @@ def check_bookmyshow(page):
         page.wait_for_timeout(3000)
         content = page.inner_text("body").lower().replace("'", "")
         movie = MOVIE_NAME.lower()
-        theatre = THEATRE_NAME.lower().replace("'", "")
+        theatre = "seven screens cinemas"
         
         if movie in content:
             page.goto("https://in.bookmyshow.com/chennai/cinemas", wait_until="networkidle", timeout=60000)
@@ -114,6 +112,21 @@ def check_bookmyshow(page):
                     return True
     except Exception as e:
         logger.error(f"BookMyShow check failed: {e}")
+    return False
+
+def check_pvr(page):
+    logger.info("Checking PVR INOX...")
+    try:
+        page.goto(URLS["pvr"], wait_until="networkidle", timeout=60000)
+        page.wait_for_timeout(3000)
+        content = page.inner_text("body").lower().replace("'", "")
+        movie = MOVIE_NAME.lower()
+        
+        if movie in content:
+            if "am" in content or "pm" in content or "book" in content or "tickets" in content:
+                return True
+    except Exception as e:
+        logger.error(f"PVR INOX check failed: {e}")
     return False
 
 def main():
@@ -139,13 +152,16 @@ def main():
             page = context.new_page()
             
             if check_district(page):
-                opened_sites.append(("District", URLS["district"]))
+                opened_sites.append(("District (Seven Screen's)", URLS["district"]))
                 
             if check_ticketnew(page):
-                opened_sites.append(("TicketNew", URLS["ticketnew"]))
+                opened_sites.append(("TicketNew (Seven Screen's)", URLS["ticketnew"]))
                 
             if check_bookmyshow(page):
-                opened_sites.append(("BookMyShow", "https://in.bookmyshow.com/chennai"))
+                opened_sites.append(("BookMyShow (Seven Screen's)", "https://in.bookmyshow.com/chennai"))
+                
+            if check_pvr(page):
+                opened_sites.append(("PVR INOX", URLS["pvr"]))
                 
             browser.close()
     except Exception as e:
@@ -157,7 +173,7 @@ def main():
         alerts = []
         for i in range(1, 4):
             site_info = "\n".join([f"✅ <a href='{site[1]}'>{site[0]}</a>" for site in opened_sites])
-            alert_msg = f"🚨 ALERT {i}\n\n🎬 <b>Movie</b>: {MOVIE_NAME}\n🏢 <b>Theatre</b>: {THEATRE_NAME}\n\n<b>Which website opened</b>:\n{site_info}\n\n🕒 <b>Time</b>: {current_time}"
+            alert_msg = f"🚨 ALERT {i}\n\n🎬 <b>Movie</b>: {MOVIE_NAME}\n\n<b>Which websites opened</b>:\n{site_info}\n\n🕒 <b>Time</b>: {current_time}"
             alerts.append(alert_msg)
             
         send_alert(alerts)
@@ -166,7 +182,7 @@ def main():
     else:
         logger.info("Booking not open yet. Sending not open message.")
         current_time = datetime.now().strftime("%Y-%m-%d %I:%M:%S %p")
-        send_alert([f"ℹ️ Status Check\n\n🎬 <b>Movie</b>: {MOVIE_NAME}\n🏢 <b>Theatre</b>: {THEATRE_NAME}\n\n❌ <b>Booking is NOT OPEN yet.</b>\n🕒 Checked at: {current_time}"])
+        send_alert([f"ℹ️ Status Check\n\n🎬 <b>Movie</b>: {MOVIE_NAME}\n\n❌ <b>Booking is NOT OPEN yet (Checked Seven Screen's & PVR INOX).</b>\n🕒 Checked at: {current_time}"])
 
 if __name__ == "__main__":
     main()
