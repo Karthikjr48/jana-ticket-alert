@@ -63,33 +63,35 @@ def send_alert(messages):
             logger.error(f"Failed to send Telegram message: {e}")
 
 def check_district(page):
-    logger.info(f"Checking District...")
+    logger.info("Checking District...")
     try:
-        page.goto(URLS["district"], wait_until="domcontentloaded", timeout=60000)
+        page.goto(URLS["district"], wait_until="networkidle", timeout=60000)
         page.wait_for_timeout(3000)
-        content = page.content().lower().replace("'", "")
+        # INIME VISIBLE TEXT MATTUM THAAN CHECK PANNUM
+        content = page.inner_text("body").lower().replace("'", "")
         movie = MOVIE_NAME.lower()
-        theatre = THEATRE_NAME.lower().replace("'", "")
         
-        if movie in content and theatre in content:
+        if movie in content:
             if "no shows" not in content and "no movies" not in content:
-                return True
+                # Strict check for timings or booking buttons
+                if "am" in content or "pm" in content or "book" in content or "tickets" in content:
+                    return True
     except Exception as e:
         logger.error(f"District check failed: {e}")
     return False
 
 def check_ticketnew(page):
-    logger.info(f"Checking TicketNew...")
+    logger.info("Checking TicketNew...")
     try:
-        page.goto(URLS["ticketnew"], wait_until="domcontentloaded", timeout=60000)
+        page.goto(URLS["ticketnew"], wait_until="networkidle", timeout=60000)
         page.wait_for_timeout(3000)
-        content = page.content().lower().replace("'", "")
+        content = page.inner_text("body").lower().replace("'", "")
         movie = MOVIE_NAME.lower()
-        theatre = THEATRE_NAME.lower().replace("'", "")
         
-        if movie in content and theatre in content:
+        if movie in content:
             if "currently no shows" not in content and "no movies available" not in content:
-                return True
+                if "am" in content or "pm" in content or "book" in content or "tickets" in content:
+                    return True
     except Exception as e:
         logger.error(f"TicketNew check failed: {e}")
     return False
@@ -97,18 +99,19 @@ def check_ticketnew(page):
 def check_bookmyshow(page):
     logger.info("Checking BookMyShow...")
     try:
-        page.goto(URLS["bookmyshow_search"], wait_until="domcontentloaded", timeout=60000)
+        page.goto(URLS["bookmyshow_search"], wait_until="networkidle", timeout=60000)
         page.wait_for_timeout(3000)
-        content = page.content().lower().replace("'", "")
+        content = page.inner_text("body").lower().replace("'", "")
         movie = MOVIE_NAME.lower()
         theatre = THEATRE_NAME.lower().replace("'", "")
         
         if movie in content:
-            page.goto("https://in.bookmyshow.com/chennai/cinemas", wait_until="domcontentloaded", timeout=60000)
+            page.goto("https://in.bookmyshow.com/chennai/cinemas", wait_until="networkidle", timeout=60000)
             page.wait_for_timeout(3000)
-            cinema_content = page.content().lower().replace("'", "")
+            cinema_content = page.inner_text("body").lower().replace("'", "")
             if theatre in cinema_content:
-                return True
+                if "am" in cinema_content or "pm" in cinema_content or "book" in cinema_content:
+                    return True
     except Exception as e:
         logger.error(f"BookMyShow check failed: {e}")
     return False
